@@ -1,5 +1,6 @@
 from fastapi import FastAPI, HTTPException, status
 
+from routers.auth import router as auth_router
 from routers.files import router as files_router
 from routers.posts import router as posts_router
 from settings.db import ping
@@ -8,6 +9,7 @@ app = FastAPI()
 
 app.include_router(posts_router)
 app.include_router(files_router)
+app.include_router(auth_router)
 
 
 @app.get("/")

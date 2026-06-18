@@ -1,14 +1,15 @@
 import logging
 
+from authx import RequestToken
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import FileResponse
 
 from schemas.post import PostCreate, PostRead, PostUpdate
 from services.pdf_generator import generate_posts_report
 from services.posts import PostService, get_post_service
+from utils.security import security
 
 logger = logging.getLogger(__name__)
-
 router = APIRouter(prefix="/posts", tags=["Posts"])
 
 
@@ -79,6 +80,7 @@ async def get_post(
 async def create_post(
     post_data: PostCreate,
     post_service: PostService = Depends(get_post_service),
+    token: RequestToken = Depends(security.access_token_required),
 ):
     try:
         return await post_service.create(data=post_data)
@@ -97,6 +99,7 @@ async def update_post(
     post_id: int,
     post_update: PostUpdate,
     post_service: PostService = Depends(get_post_service),
+    token: RequestToken = Depends(security.access_token_required),
 ):
     try:
         post = await post_service.update(post_id=post_id, data=post_update)
@@ -120,8 +123,15 @@ async def update_post(
 async def delete_post(
     post_id: int,
     post_service: PostService = Depends(get_post_service),
+    token: RequestToken = Depends(security.access_token_required),
 ):
     try:
+        if token.role != "admin":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You do not have permission to delete posts",
+            )
+
         deleted = await post_service.delete(post_id=post_id)
         if not deleted:
             raise HTTPException(
