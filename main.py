@@ -3,20 +3,22 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, status
 
 from models import Base
+from routers.posts import router as posts_router
 from settings.db import engine, ping
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Автоматично створюємо всі таблиці при старті контейнера
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     yield
-    # Закриваємо з'єднання при зупинці програми
     await engine.dispose()
 
 
 app = FastAPI(lifespan=lifespan)
+
+# Підключаємо CRUD-модуль статей блогу
+app.include_router(posts_router)
 
 
 @app.get("/")
