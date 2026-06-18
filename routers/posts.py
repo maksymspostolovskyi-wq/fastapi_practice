@@ -1,13 +1,39 @@
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import FileResponse
 
 from schemas.post import PostCreate, PostRead, PostUpdate
+from services.pdf_generator import generate_posts_report
 from services.posts import PostService, get_post_service
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/posts", tags=["Posts"])
+
+
+@router.get("/report", response_class=FileResponse)
+async def get_posts_report(
+    post_service: PostService = Depends(get_post_service),
+):
+    try:
+        posts = await post_service.get_all()
+        filepath = generate_posts_report(
+            filename="posts_report.pdf",
+            report_title="Platform Publications Report",
+            posts_data=posts,
+        )
+        return FileResponse(
+            path=filepath,
+            filename="posts_report.pdf",
+            media_type="application/pdf",
+        )
+    except Exception as exc:
+        logger.exception("Failed to generate posts report")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Could not generate report",
+        ) from exc
 
 
 @router.get("/", response_model=list[PostRead])
